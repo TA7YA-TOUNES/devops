@@ -1,0 +1,57 @@
+pipeline {
+    agent any
+  
+    environment {
+        // Remplacez par votre URL SonarQube par son @IP  
+        SONAR_HOST_URL = 'http://192.168.100.20:9000'
+    }
+
+      tools {
+        maven 'maven' // This name must match what you configured
+    }
+
+    stages {
+        
+        //Clôner le dépôt depuis Github
+        stage('Cloner le dépôt') {
+            steps {
+                git url: 'https://github.com/TA7YA-TOUNES/devops', branch: 'main'
+            }
+        }
+
+        //Installer les dépendances de votre application avec l'outil de construction de build maven
+        stage('Build Maven') {
+            steps {
+                sh 'mvn clean install -DskipTests'
+            }
+        }
+
+        //Effectuer une analyse de la qualité de code avec Sonarqube
+        //Créer un projet un projet dans sonarqube
+        stage('Analyse SonarQube') {
+            steps {
+                withSonarQubeEnv('sonarqube') {
+                    sh 'mvn sonar:sonar -Dsonar.projectKey=bis-sonarqube-project'
+                }
+            }
+        }
+
+
+        //Dockériser l'application et faire en sortir une image de l'application avec docker build
+        stage('Docker Build') {
+            steps {
+                // Specifier un nom pour le build
+                sh 'docker build -t app:latest .'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline terminé avec succès.'
+        }
+        failure {
+            echo 'Échec du pipeline.'
+        }
+    }
+}
